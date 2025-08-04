@@ -1,0 +1,720 @@
+openapi: 3.0.1
+info:
+  title: Entrade External Endpoints
+  description: Entrade Endpoints for External System Integration.
+  version: v1
+servers:
+  - url: https://squid-app-o8e56.ondigitalocean.app/echo
+paths:
+  /api/customization/ptt/salesforce/counterparties:
+    put:
+      tags:
+        - Counterparties
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditOneUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditOneUpdateResponse'
+  /api/customization/ptt/credit-bureau/credit/exposure:
+    get:
+      tags:
+        - Credit
+      parameters:
+        - name: SAPCustomerCodes
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CreditRiskDataDto'
+  /api/customization/ptt/fx-bidding/fx-rates:
+    post:
+      tags:
+        - FxRates
+      summary: Updates the foreign exchange rates for parcels.
+      description: "Sample request:\r\n\r\n    POST /ptt/settlements/fx-rates\r\n    {\r\n        \"parcelFxRates\": [\r\n            {\r\n                \"referenceId\": \"parcel-12345\",\r\n                \"fxRate\": 1.2345\r\n            },\r\n            {\r\n                \"referenceId\": \"trade-67890\",\r\n                \"fxRate\": 6.789\r\n            }\r\n        ]\r\n    }\r\n\r\nThe request must include a list of parcel FX rates, each with a valid parcel ID and FX rate. \r\nIf any of the parcel ID is not found, the operation will fail and response with Microsoft.AspNetCore.Http.StatusCodes.Status404NotFound."
+      requestBody:
+        description: The request containing the list of parcel FX rates to update.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFxRatesRequest'
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/customization/ptt/sap/inventory/goods-movements:
+    post:
+      tags:
+        - Inventory
+      summary: Inbound goods movements, inventory gain or loss data from Sap.
+      requestBody:
+        description: ''
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateGoodsMovementsRequest'
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Internal Server Error
+  /api/customization/ptt/sap/invoice:
+    post:
+      tags:
+        - Invoice
+      summary: Receive Invoice data for both purchase and sales order from SAP.
+      description: "Three scenarios applied to this interface:\r\n1 billing request   - 1 invoice (single): User created 1 invoice in Sap for the billing request.\r\n1 billing request   - n invoices (split): User created multiple invoices and group them together in Sap for a single billing request.\r\nn billing requests - 1 invoice (merge): User created 1 invoice in Sap for multiple billing requests."
+      requestBody:
+        description: Request contains invoice document number, amount, tax info from Sap
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSapInvoiceRequest'
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Internal Server Error
+  /api/customization/ptt/sap/invoice/{billingRequestNumber}/reject:
+    post:
+      tags:
+        - Invoice
+      summary: Reject the billing request sent from Entrade to Sap.
+      parameters:
+        - name: billingRequestNumber
+          in: path
+          description: Billing request number be rejected
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: The reason for rejection
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectBillingRequestRequest'
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Internal Server Error
+  /api/customization/ptt/sap/payment:
+    post:
+      tags:
+        - Payment
+      summary: Receive payment from SAP and call settlement Apis to create billing payment and allocation.
+      description: "Sap interface code: ZPIFII005  Export Vendor Payment Info for New CTRM. And ZCPIARI002 Customer Payment Information. Both vendor and customer payments should go through this Api with different PayDirection. (vendor payment is Pay, customer payment is Receive)\r\nThis interface create billing payments for either a fully paid invoice or a partially paid invoice."
+      requestBody:
+        description: The request contains all the necessary data for billing payments creation in Entrade.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Internal Server Error
+  /api/customization/ptt/sap/payment/{paymentDocumentNumber}/reverse:
+    post:
+      tags:
+        - Payment
+      summary: Create a new (payment or a log) record to reverse the existing billing payments from Sap.
+      description: 'The reversal of billing payments is included in Sap interface code: ZPIFII005 Export Vendor Payment Info for New CTRM and ZCPIARI002 Customer Payment Information using different transaction type. Seperate the operation into a new Api.'
+      parameters:
+        - name: paymentDocumentNumber
+          in: path
+          description: The payment document number to be reversed.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: The request contains invoice request number, invoice document number and the payment document number.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReversePaymentRequest'
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Internal Server Error
+  /api/customization/ptt/sap/payment/{paymentDocumentNumber}:
+    delete:
+      tags:
+        - Payment
+      summary: Inactivate (reset in Sap term) the existing billing payment from Sap and delete the allocation.
+      description: 'The reset of billing payments is included in Sap interface code: ZPIFII005 Export Vendor Payment Info for New CTRM and ZCPIARI002 Customer Payment Information using different transaction type. Seperate the operation into a new Api.'
+      parameters:
+        - name: paymentDocumentNumber
+          in: path
+          description: The payment document number to be deleted
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Internal Server Error
+  /api/customization/ptt/mofi/reports/calculate:
+    post:
+      tags:
+        - Reports
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportCalculationRequest'
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Internal Server Error
+components:
+  schemas:
+    AccountMemoErrorMessage:
+      type: object
+      properties:
+        AccountMemo:
+          type: string
+          nullable: true
+        Message:
+          type: string
+          nullable: true
+      additionalProperties: false
+    CreateGoodsMovementsRequest:
+      required:
+        - materialCode
+        - materialDocumentNumber
+        - movementType
+        - plant
+        - storageLocation
+        - valuationType
+        - volumes
+      type: object
+      properties:
+        gainLoss:
+          $ref: '#/components/schemas/GainLoss'
+        documentDate:
+          type: string
+          format: date-time
+        materialDocumentNumber:
+          type: string
+          description: Unique identifier for the Gain Loss adjustment.
+          nullable: true
+        materialCode:
+          type: string
+          nullable: true
+        plant:
+          type: string
+          nullable: true
+        storageLocation:
+          type: string
+          nullable: true
+        movementType:
+          type: string
+          nullable: true
+        valuationType:
+          type: string
+          nullable: true
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SapGoodsMovementsVolumeDto'
+          nullable: true
+      additionalProperties: false
+    CreatePaymentRequest:
+      required:
+        - billingRequestNumber
+        - companyCode
+        - invoiceDocumentNumber
+        - paymentCurrency
+        - paymentDate
+        - paymentDirection
+        - paymentDocumentNumber
+      type: object
+      properties:
+        billingRequestNumber:
+          type: string
+          description: The unique identifier of the billing request. This number is generated from Sap after Entrade sending billing request to Sap. This number is corresponding to Entrade StatementUid.
+          nullable: true
+        invoiceDocumentNumber:
+          type: string
+          description: Sap FI document number. The identifier for invoice/CN/DN created in Sap after the billing request.
+          nullable: true
+        paymentDocumentNumber:
+          type: string
+          description: Sap Payment document number. The identifier for Sap payment Sap.
+          nullable: true
+        companyCode:
+          type: string
+          nullable: true
+        paymentDirection:
+          $ref: '#/components/schemas/PaymentDirection'
+        paymentDate:
+          type: string
+          format: date-time
+        paymentCurrency:
+          type: string
+          nullable: true
+        paymentAmount:
+          type: number
+          description: Amount without Tax. (Need to be confirmed)
+          format: double
+        paymentAmountInInvoiceCurrency:
+          type: number
+          format: double
+        note:
+          type: string
+          nullable: true
+      additionalProperties: false
+    CreateSapInvoiceRequest:
+      required:
+        - companyCode
+        - currency
+        - invoiceDocumentNumber
+        - invoiceStatus
+        - items
+      type: object
+      properties:
+        invoiceDocumentNumber:
+          type: string
+          nullable: true
+        invoiceStatus:
+          type: string
+          description: To be considered
+          nullable: true
+        documentDate:
+          type: string
+          description: To be considered about the document date, posting date and baseline date
+          format: date-time
+        companyCode:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SapInvoiceItemDto'
+          nullable: true
+      additionalProperties: false
+    CreditOneCounterparty:
+      type: object
+      properties:
+        AccountMemo:
+          type: string
+          nullable: true
+        PartyStaus:
+          type: integer
+          format: int32
+        PTTRating:
+          type: string
+          nullable: true
+        PartyGRCconcern:
+          type: string
+          nullable: true
+      additionalProperties: false
+    CreditOneUpdateRequest:
+      type: object
+      properties:
+        SyncCreditOneRequest:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreditOneCounterparty'
+          nullable: true
+      additionalProperties: false
+    CreditOneUpdateResponse:
+      type: object
+      properties:
+        Value:
+          $ref: '#/components/schemas/CreditOneValue'
+        Success:
+          type: boolean
+        DisplayMessage:
+          type: string
+          nullable: true
+        InternalMessage:
+          type: string
+          nullable: true
+      additionalProperties: false
+    CreditOneValue:
+      type: object
+      properties:
+        Remark:
+          type: string
+          nullable: true
+          readOnly: true
+        FailedList:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountMemoErrorMessage'
+          description: Failed list of - Account Memo along with failed message
+          nullable: true
+        IsCompleted:
+          type: boolean
+      additionalProperties: false
+    CreditRiskDataDto:
+      type: object
+      properties:
+        sapCustomerCode:
+          type: string
+          nullable: true
+        customerName:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+        creditLimit:
+          type: number
+          format: double
+        creditUsage:
+          type: number
+          format: double
+        parentSAPCustomerCode:
+          type: string
+          nullable: true
+        parentCustomerName:
+          type: string
+          nullable: true
+        parentCurrency:
+          type: string
+          nullable: true
+        parentCreditLimit:
+          type: number
+          format: double
+        parentCreditUsage:
+          type: number
+          format: double
+      additionalProperties: false
+    GainLoss:
+      enum:
+        - 0
+        - 1
+      type: integer
+      format: int32
+    InventoryItem:
+      required:
+        - amount
+        - materialNo
+        - plantNo
+        - productName
+        - unit
+        - unitCost
+        - volume
+      type: object
+      properties:
+        plantNo:
+          minLength: 1
+          type: string
+        materialNo:
+          minLength: 1
+          type: string
+        productName:
+          minLength: 1
+          type: string
+        unitCost:
+          minLength: 1
+          type: string
+        volume:
+          minLength: 1
+          type: string
+        unit:
+          minLength: 1
+          type: string
+        amount:
+          minLength: 1
+          type: string
+      additionalProperties: false
+    ParcelFxRate:
+      required:
+        - fxRate
+        - referenceId
+      type: object
+      properties:
+        referenceId:
+          minLength: 1
+          type: string
+        fxRate:
+          type: number
+          format: double
+      additionalProperties: false
+    PaymentDirection:
+      enum:
+        - 0
+        - 1
+      type: integer
+      format: int32
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        status:
+          type: integer
+          format: int32
+          nullable: true
+        detail:
+          type: string
+          nullable: true
+        instance:
+          type: string
+          nullable: true
+      additionalProperties: {}
+    ProductType:
+      enum:
+        - 1
+        - 2
+        - 3
+        - 4
+      type: integer
+      format: int32
+    RejectBillingRequestRequest:
+      type: object
+      properties:
+        rejectReason:
+          type: string
+          nullable: true
+      additionalProperties: false
+    ReportCalculationRequest:
+      required:
+        - companyCode
+        - filePath
+        - periodMonth
+        - periodYear
+        - productType
+      type: object
+      properties:
+        companyCode:
+          type: string
+          nullable: true
+        productType:
+          $ref: '#/components/schemas/ProductType'
+        periodMonth:
+          type: integer
+          format: int32
+        periodYear:
+          type: integer
+          format: int32
+        filePath:
+          type: string
+          nullable: true
+        sensitiveType:
+          $ref: '#/components/schemas/SensitivityType'
+        inventoryItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryItem'
+          nullable: true
+        sensitivityItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/SensitivityItem'
+          nullable: true
+      additionalProperties: false
+    ReversePaymentRequest:
+      required:
+        - billingRequestNumber
+        - invoiceDocumentNumber
+        - paymentDocumentNumber
+      type: object
+      properties:
+        billingRequestNumber:
+          type: string
+          description: The unique identifier of the billing request. (Maybe not needed for reversal?)
+          nullable: true
+        invoiceDocumentNumber:
+          type: string
+          description: Sap FI document number. (Maybe not needed for reversal?)
+          nullable: true
+        paymentDocumentNumber:
+          type: string
+          description: Sap Payment document number. The identifier for Sap payment Sap.
+          nullable: true
+      additionalProperties: false
+    SapBillingRequestDto:
+      required:
+        - billingRequestItems
+        - billingRequestNumber
+      type: object
+      properties:
+        billingRequestNumber:
+          type: string
+          nullable: true
+        billingRequestItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/SapBillingRequestItemDto'
+          nullable: true
+      additionalProperties: false
+    SapBillingRequestItemDto:
+      required:
+        - itemSequence
+        - purchaseSaleOrderNumber
+      type: object
+      properties:
+        itemSequence:
+          type: integer
+          format: int32
+        purchaseSaleOrderNumber:
+          type: string
+          nullable: true
+      additionalProperties: false
+    SapGoodsMovementsVolumeDto:
+      required:
+        - unitOfMeasure
+      type: object
+      properties:
+        volume:
+          type: number
+          format: double
+        unitOfMeasure:
+          type: string
+          nullable: true
+      additionalProperties: false
+    SapInvoiceItemDto:
+      required:
+        - billingRequest
+      type: object
+      properties:
+        itemSequence:
+          type: integer
+          format: int32
+        billingRequest:
+          $ref: '#/components/schemas/SapBillingRequestDto'
+        amount:
+          type: number
+          format: double
+        taxCode:
+          type: string
+          nullable: true
+        taxes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SapInvoiceTaxDto'
+          nullable: true
+        withholdTaxes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SapInvoiceWithholdTaxDto'
+          nullable: true
+      additionalProperties: false
+    SapInvoiceTaxDto:
+      required:
+        - taxCode
+      type: object
+      properties:
+        taxCode:
+          type: string
+          nullable: true
+        taxAmount:
+          type: number
+          format: double
+          nullable: true
+        taxBaseAmount:
+          type: number
+          format: double
+          nullable: true
+      additionalProperties: false
+    SapInvoiceWithholdTaxDto:
+      required:
+        - taxCode
+        - withholdType
+      type: object
+      properties:
+        withholdType:
+          type: string
+          nullable: true
+        taxCode:
+          type: string
+          nullable: true
+        taxAmount:
+          type: number
+          format: double
+          nullable: true
+        taxBaseAmount:
+          type: number
+          format: double
+          nullable: true
+        withholdingTaxAmount:
+          type: number
+          format: double
+          nullable: true
+      additionalProperties: false
+    SensitivityItem:
+      required:
+        - currency
+        - unit
+      type: object
+      properties:
+        percentRate:
+          type: number
+          format: double
+          nullable: true
+        amountRate:
+          type: number
+          format: double
+          nullable: true
+        currency:
+          minLength: 1
+          type: string
+        unit:
+          minLength: 1
+          type: string
+      additionalProperties: false
+    SensitivityType:
+      enum:
+        - 0
+        - 1
+        - 2
+      type: integer
+      format: int32
+    UpdateFxRatesRequest:
+      required:
+        - parcelFxRates
+      type: object
+      properties:
+        parcelFxRates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParcelFxRate'
+      additionalProperties: false
