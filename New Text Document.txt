@@ -1,0 +1,70 @@
+AmazonS3FullAccess
+AWS managed
+
+AmazonSSMReadOnlyAccess
+AWS managed
+
+AWSCloudFormationFullAccess
+AWS managed
+
+codebuild-poc-cdk-pipeline-passrole
+Customer inline
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": "iam:PassRole",
+			"Resource": "arn:aws:iam::682033483416:role/cdk-hnb659fds-cfn-exec-role-682033483416-ap-southeast-1"
+		}
+	]
+}
+
+CodeBuildBasePolicy-poc-cdk-pipeline-ap-southeast-1
+Customer managed
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Resource": [
+                "arn:aws:logs:ap-southeast-1:682033483416:log-group:/aws/codebuild/poc-cdk-pipeline",
+                "arn:aws:logs:ap-southeast-1:682033483416:log-group:/aws/codebuild/poc-cdk-pipeline:*"
+            ],
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Resource": [
+                "arn:aws:s3:::codepipeline-ap-southeast-1-*"
+            ],
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:GetBucketAcl",
+                "s3:GetBucketLocation"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "codebuild:CreateReportGroup",
+                "codebuild:CreateReport",
+                "codebuild:UpdateReport",
+                "codebuild:BatchPutTestCases",
+                "codebuild:BatchPutCodeCoverages"
+            ],
+            "Resource": [
+                "arn:aws:codebuild:ap-southeast-1:682033483416:report-group/poc-cdk-pipeline-*"
+            ]
+        }
+    ]
+}
+
+SecretsManagerReadWrite
+AWS managed
