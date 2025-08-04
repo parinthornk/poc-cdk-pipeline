@@ -1,0 +1,29 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+    commands:
+      - echo Installing Maven...
+      - yum install -y maven
+      - echo Installing AWS CDK...
+      - npm install -g aws-cdk
+
+  pre_build:
+    commands:
+      - echo "Who am I?"
+      - aws sts get-caller-identity
+      - echo Logging in to AWS...
+      - aws sts get-caller-identity
+      - echo Running Maven clean install...
+      - mvn clean install
+
+  build:
+    commands:
+      - echo Synthesizing CDK app...
+      - cdk synth
+
+artifacts:
+  files:
+    - cdk.out/**/*
