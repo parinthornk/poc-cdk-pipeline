@@ -23,9 +23,6 @@ phases:
     commands:
       - echo Synthesizing CDK app...
       - cdk synth
-
-  deploy:
-    commands:
       - echo Deploying CDK app...
       - cdk deploy --require-approval never --outputs-file cdk_output.json
       - cat cdk_output.json
