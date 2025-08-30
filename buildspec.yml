@@ -9,11 +9,11 @@ phases:
       - yum install -y maven
       - echo Installing AWS CDK...
       - npm install -g aws-cdk
+      - echo Installing jq...
+      - yum install -y jq
 
   pre_build:
     commands:
-      - echo "Who am I?"
-      - aws sts get-caller-identity
       - echo Logging in to AWS...
       - aws sts get-caller-identity
       - echo Running Maven clean install...
